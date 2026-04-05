@@ -1,0 +1,202 @@
+
+mission-speak/
+│
+├── README.md
+├── package.json
+├── frontend/
+│   ├── package.json
+│   ├── src/
+│   │   ├── App.js
+│   │   ├── index.js
+│   │   ├── components/
+│   │   │   ├── Login.js
+│   │   │   ├── Dashboard.js
+│   │   │   ├── Mission.js
+│   │   │   ├── Recorder.js
+│   │   │   ├── AIFriend.js
+│   │   │   └── ProgressTracker.js
+│   │   └── utils/
+│   │       └── speech.js
+│   └── public/
+│       └── index.html
+│
+└── backend/
+    ├── package.json
+    ├── server.js
+    ├── config/
+    │   └── db.js
+    ├── models/
+    │   ├── User.js
+    │   ├── Mission.js
+    │   └── Recording.js
+    ├── routes/
+    │   ├── authRoutes.js
+    │   ├── missionRoutes.js
+    │   ├── aiRoutes.js
+    │   └── teacherRoutes.js
+    └── controllers/
+        ├── authController.js
+        ├── missionController.js
+        ├── aiController.js
+        └── teacherController.js
+mission-speak/
+│
+├── README.md
+├── package.json
+├── frontend/
+│   ├── package.json
+│   ├── src/
+│   │   ├── App.js
+│   │   ├── index.js
+│   │   ├── components/
+│   │   │   ├── Login.js
+│   │   │   ├── Dashboard.js
+│   │   │   ├── Mission.js
+│   │   │   ├── Recorder.js
+│   │   │   ├── AIFriend.js
+│   │   │   └── ProgressTracker.js
+│   │   └── utils/
+│   │       └── speech.js
+│   └── public/
+│       └── index.html
+│
+└── backend/
+    ├── package.json
+    ├── server.js
+    ├── config/
+    │   └── db.js
+    ├── models/
+    │   ├── User.js
+    │   ├── Mission.js
+    │   └── Recording.js
+    ├── routes/
+    │   ├── authRoutes.js
+    │   ├── missionRoutes.js
+    │   ├── aiRoutes.js
+    │   └── teacherRoutes.js
+    └── controllers/
+        ├── authController.js
+        ├── missionController.js
+        ├── aiController.js
+        └── teacherController.js
+import mongoose from 'mongoose';
+
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log('MongoDB connected');
+  } catch (err) {
+    console.error(err.message);
+    process.exit(1);
+  }
+};
+
+export default connectDB;
+import mongoose from 'mongoose';
+
+const userSchema = new mongoose.Schema({
+  name: String,
+  email: { type: String, unique: true },
+  password: String,
+  role: { type: String, enum: ['student', 'teacher'], default: 'student' },
+  progress: [{ week: Number, missionsCompleted: [String] }]
+});
+
+export default mongoose.model('User', userSchema);
+import mongoose from 'mongoose';
+
+const recordingSchema = new mongoose.Schema({
+  userId: mongoose.Schema.Types.ObjectId,
+  missionId: mongoose.Schema.Types.ObjectId,
+  audioUrl: String,
+  transcript: String,
+  feedback: String,
+}, { timestamps: true });
+
+export default mongoose.model('Recording', recordingSchema);
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Login from './components/Login';
+import Dashboard from './components/Dashboard';
+import Mission from './components/Mission';
+import AIFriend from './components/AIFriend';
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/mission/:id" element={<Mission />} />
+        <Route path="/ai-friend" element={<AIFriend />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+export const recordAudio = () => {
+  const recognition = new window.webkitSpeechRecognition();
+  recognition.continuous = false;
+  recognition.lang = 'en-US';
+
+  return new Promise((resolve) => {
+    recognition.start();
+    recognition.onresult = (event) => {
+      resolve(event.results[0][0].transcript);
+    };
+  });
+};
+export async function talkToAIFriend(message) {
+  const res = await fetch(`${process.env.REACT_APP_API_URL}/api/ai/talk`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message }),
+  });
+  return await res.json();
+}
+import OpenAI from 'openai';
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+export const talkToAI = async (req, res) => {
+  const { message } = req.body;
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4-turbo',
+      messages: [
+        { role: 'system', content: 'You are a friendly English-speaking tutor.' },
+        { role: 'user', content: message }
+      ]
+    });
+
+    const reply = completion.choices[0].message.content;
+    res.json({ reply });
+  } catch (err) {
+    res.status(500).json({ error: 'AI error', details: err });
+  }
+};
+# Mission Speak: Your English Adventure 🎧
+
+A gamified English speaking platform for students and teachers.
+
+## Features
+- Student & Teacher login
+- Weekly “Speaking Missions”
+- AI Friend: Converse and get instant spoken feedback
+- Progress tracking with audio recordings & stats dashboard
+- Teacher portal for reviewing and grading missions
+
+## Tech Stack
+- **Frontend:** React + Web Speech API
+- **Backend:** Node.js (Express) + MongoDB
+- **AI Integration:** OpenAI API (GPT + TTS/STT)
+- **Auth:** Firebase Auth or OAuth (Google/Microsoft)
+
+## Getting Started
+
+```bash
+git clone [github.com](https://github.com/yourusername/mission-speak.git)
+cd mission-speak/backend && npm install
+cd ../frontend && npm install
+MONGO_URI=your_mongo_url
+OPENAI_API_KEY=your_key
+PORT=5000
+npm run dev  # concurrently runs frontend + backend
